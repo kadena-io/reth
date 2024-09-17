@@ -8,10 +8,19 @@ pub trait OptimismHardforks: EthereumHardforks {
         self.fork(OptimismHardfork::Bedrock).active_at_block(block_number)
     }
 
-    /// Convenience method to check if [`Ecotone`](OptimismHardfork::Ecotone) is active at a given
-    /// timestamp.
+    /// Returns `true` if [`Ecotone`](OptimismHardfork::Ecotone) is active at given block timestamp.
     fn is_ecotone_active_at_timestamp(&self, timestamp: u64) -> bool {
         self.fork(OptimismHardfork::Ecotone).active_at_timestamp(timestamp)
+    }
+
+    /// Returns `true` if [`Ecotone`](OptimismHardfork::Ecotone) is active at given block timestamp.
+    fn is_fjord_active_at_timestamp(&self, timestamp: u64) -> bool {
+        self.fork(OptimismHardfork::Ecotone).active_at_timestamp(timestamp)
+    }
+
+    /// Returns `true` if [`Granite`](OptimismHardfork::Granite) is active at given block timestamp.
+    fn is_granite_active_at_timestamp(&self, timestamp: u64) -> bool {
+        self.fork(OptimismHardfork::Granite).active_at_timestamp(timestamp)
     }
 }
 
