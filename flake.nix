@@ -30,7 +30,9 @@
             pkg-config
             eza
             fd
-            rust-bin.beta.latest.default
+            (rust-bin.beta.latest.default.override {
+               extensions = [ "rust-src" ];
+             })
             rust-bin.beta.latest.rust-analyzer
             darwin.apple_sdk.frameworks.Security
             darwin.apple_sdk.frameworks.CoreServices
