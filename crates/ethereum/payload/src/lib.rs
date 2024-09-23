@@ -25,10 +25,8 @@ use reth_evm::{
 };
 use reth_evm_ethereum::{eip6110::parse_deposits_from_receipts, EthEvmConfig};
 use reth_execution_types::ExecutionOutcome;
-use reth_payload_builder::{
-    error::PayloadBuilderError, EthBuiltPayload, EthPayloadBuilderAttributes,
-};
-use reth_payload_primitives::PayloadBuilderAttributes;
+use reth_payload_builder::{EthBuiltPayload, EthPayloadBuilderAttributes};
+use reth_payload_primitives::{PayloadBuilderAttributes, PayloadBuilderError};
 use reth_primitives::{
     constants::{eip4844::MAX_DATA_GAS_PER_BLOCK, BEACON_NONCE},
     eip4844::calculate_excess_blob_gas,
@@ -67,7 +65,7 @@ impl<EvmConfig> EthereumPayloadBuilder<EvmConfig> {
 
 impl<EvmConfig> EthereumPayloadBuilder<EvmConfig>
 where
-    EvmConfig: ConfigureEvm,
+    EvmConfig: ConfigureEvm<Header = Header>,
 {
     /// Returns the configured [`CfgEnvWithHandlerCfg`] and [`BlockEnv`] for the targeted payload
     /// (that has the `parent` as its parent).
@@ -88,7 +86,7 @@ where
 // Default implementation of [PayloadBuilder] for unit type
 impl<EvmConfig, Pool, Client> PayloadBuilder<Pool, Client> for EthereumPayloadBuilder<EvmConfig>
 where
-    EvmConfig: ConfigureEvm,
+    EvmConfig: ConfigureEvm<Header = Header>,
     Client: StateProviderFactory,
     Pool: TransactionPool,
 {
@@ -137,7 +135,7 @@ pub fn default_ethereum_payload<EvmConfig, Pool, Client>(
     initialized_block_env: BlockEnv,
 ) -> Result<BuildOutcome<EthBuiltPayload>, PayloadBuilderError>
 where
-    EvmConfig: ConfigureEvm,
+    EvmConfig: ConfigureEvm<Header = Header>,
     Client: StateProviderFactory,
     Pool: TransactionPool,
 {
@@ -391,7 +389,10 @@ where
         excess_blob_gas = if chain_spec.is_cancun_active_at_timestamp(parent_block.timestamp) {
             let parent_excess_blob_gas = parent_block.excess_blob_gas.unwrap_or_default();
             let parent_blob_gas_used = parent_block.blob_gas_used.unwrap_or_default();
-            Some(calculate_excess_blob_gas(parent_excess_blob_gas, parent_blob_gas_used))
+            Some(calculate_excess_blob_gas(
+                parent_excess_blob_gas as u64,
+                parent_blob_gas_used as u64,
+            ))
         } else {
             // for the first post-fork block, both parent.blob_gas_used and
             // parent.excess_blob_gas are evaluated as 0
@@ -412,16 +413,16 @@ where
         logs_bloom,
         timestamp: attributes.timestamp,
         mix_hash: attributes.prev_randao,
-        nonce: BEACON_NONCE,
-        base_fee_per_gas: Some(base_fee),
+        nonce: BEACON_NONCE.into(),
+        base_fee_per_gas: Some(base_fee.into()),
         number: parent_block.number + 1,
-        gas_limit: block_gas_limit,
+        gas_limit: block_gas_limit.into(),
         difficulty: U256::ZERO,
-        gas_used: cumulative_gas_used,
+        gas_used: cumulative_gas_used.into(),
         extra_data,
         parent_beacon_block_root: attributes.parent_beacon_block_root,
-        blob_gas_used,
-        excess_blob_gas,
+        blob_gas_used: blob_gas_used.map(Into::into),
+        excess_blob_gas: excess_blob_gas.map(Into::into),
         requests_root,
     };
 

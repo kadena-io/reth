@@ -6,6 +6,11 @@ use crate::{
     StateProviderBox, StateProviderFactory, StateReader, StateRootProvider, TransactionVariant,
     TransactionsProvider, WithdrawalsProvider,
 };
+use alloy_eips::{BlockHashOrNumber, BlockId, BlockNumberOrTag};
+use alloy_primitives::{
+    keccak256, Address, BlockHash, BlockNumber, Bytes, StorageKey, StorageValue, TxHash, TxNumber,
+    B256, U256,
+};
 use parking_lot::Mutex;
 use reth_chainspec::{ChainInfo, ChainSpec};
 use reth_db::mock::{DatabaseMock, TxMock};
@@ -13,11 +18,9 @@ use reth_db_api::models::{AccountBeforeTx, StoredBlockBodyIndices};
 use reth_evm::ConfigureEvmEnv;
 use reth_execution_types::{Chain, ExecutionOutcome};
 use reth_primitives::{
-    keccak256, Account, Address, Block, BlockHash, BlockHashOrNumber, BlockId, BlockNumber,
-    BlockNumberOrTag, BlockWithSenders, Bytecode, Bytes, GotExpected, Header, Receipt, SealedBlock,
-    SealedBlockWithSenders, SealedHeader, StorageKey, StorageValue, TransactionMeta,
-    TransactionSigned, TransactionSignedNoHash, TxHash, TxNumber, Withdrawal, Withdrawals, B256,
-    U256,
+    alloy_primitives::Sealable, Account, Block, BlockWithSenders, Bytecode, GotExpected, Header,
+    Receipt, SealedBlock, SealedBlockWithSenders, SealedHeader, TransactionMeta, TransactionSigned,
+    TransactionSignedNoHash, Withdrawal, Withdrawals,
 };
 use reth_stages_types::{StageCheckpoint, StageId};
 use reth_storage_api::{
@@ -145,8 +148,8 @@ impl MockEthProvider {
 
 impl DatabaseProviderFactory for MockEthProvider {
     type DB = DatabaseMock;
-    type Provider = DatabaseProvider<TxMock>;
-    type ProviderRW = DatabaseProvider<TxMock>;
+    type Provider = DatabaseProvider<TxMock, ChainSpec>;
+    type ProviderRW = DatabaseProvider<TxMock, ChainSpec>;
 
     fn database_provider_ro(&self) -> ProviderResult<Self::Provider> {
         Err(ConsistentViewError::Syncing { best_block: GotExpected::new(0, 0) }.into())
@@ -197,7 +200,11 @@ impl HeaderProvider for MockEthProvider {
     }
 
     fn sealed_header(&self, number: BlockNumber) -> ProviderResult<Option<SealedHeader>> {
-        Ok(self.header_by_number(number)?.map(|h| h.seal_slow()))
+        Ok(self.header_by_number(number)?.map(|h| {
+            let sealed = h.seal_slow();
+            let (header, seal) = sealed.into_parts();
+            SealedHeader::new(header, seal)
+        }))
     }
 
     fn sealed_headers_while(
@@ -208,7 +215,11 @@ impl HeaderProvider for MockEthProvider {
         Ok(self
             .headers_range(range)?
             .into_iter()
-            .map(|h| h.seal_slow())
+            .map(|h| {
+                let sealed = h.seal_slow();
+                let (header, seal) = sealed.into_parts();
+                SealedHeader::new(header, seal)
+            })
             .take_while(|h| predicate(h))
             .collect())
     }
@@ -276,8 +287,14 @@ impl TransactionsProvider for MockEthProvider {
                         index: index as u64,
                         block_hash: *block_hash,
                         block_number: block.header.number,
-                        base_fee: block.header.base_fee_per_gas,
-                        excess_blob_gas: block.header.excess_blob_gas,
+                        base_fee: block
+                            .header
+                            .base_fee_per_gas
+                            .map(|base_fer_per_gas| base_fer_per_gas as u64),
+                        excess_blob_gas: block
+                            .header
+                            .excess_blob_gas
+                            .map(|excess_blob_gas| excess_blob_gas as u64),
                         timestamp: block.header.timestamp,
                     };
                     return Ok(Some((tx.clone(), meta)))
@@ -308,7 +325,7 @@ impl TransactionsProvider for MockEthProvider {
 
     fn transactions_by_block_range(
         &self,
-        range: impl RangeBounds<reth_primitives::BlockNumber>,
+        range: impl RangeBounds<alloy_primitives::BlockNumber>,
     ) -> ProviderResult<Vec<Vec<TransactionSigned>>> {
         // init btreemap so we can return in order
         let mut map = BTreeMap::new();
@@ -439,7 +456,7 @@ impl BlockNumReader for MockEthProvider {
         self.best_block_number()
     }
 
-    fn block_number(&self, hash: B256) -> ProviderResult<Option<reth_primitives::BlockNumber>> {
+    fn block_number(&self, hash: B256) -> ProviderResult<Option<alloy_primitives::BlockNumber>> {
         let lock = self.blocks.lock();
         let num = lock.iter().find_map(|(h, b)| (*h == hash).then_some(b.number));
         Ok(num)
@@ -547,7 +564,14 @@ impl BlockReaderIdExt for MockEthProvider {
     }
 
     fn sealed_header_by_id(&self, id: BlockId) -> ProviderResult<Option<SealedHeader>> {
-        self.header_by_id(id)?.map_or_else(|| Ok(None), |h| Ok(Some(h.seal_slow())))
+        self.header_by_id(id)?.map_or_else(
+            || Ok(None),
+            |h| {
+                let sealed = h.seal_slow();
+                let (header, seal) = sealed.into_parts();
+                Ok(Some(SealedHeader::new(header, seal)))
+            },
+        )
     }
 
     fn header_by_id(&self, id: BlockId) -> ProviderResult<Option<Header>> {
@@ -680,7 +704,7 @@ impl EvmEnvProvider for MockEthProvider {
         _evm_config: EvmConfig,
     ) -> ProviderResult<()>
     where
-        EvmConfig: ConfigureEvmEnv,
+        EvmConfig: ConfigureEvmEnv<Header = Header>,
     {
         Ok(())
     }
@@ -693,7 +717,7 @@ impl EvmEnvProvider for MockEthProvider {
         _evm_config: EvmConfig,
     ) -> ProviderResult<()>
     where
-        EvmConfig: ConfigureEvmEnv,
+        EvmConfig: ConfigureEvmEnv<Header = Header>,
     {
         Ok(())
     }
@@ -705,7 +729,7 @@ impl EvmEnvProvider for MockEthProvider {
         _evm_config: EvmConfig,
     ) -> ProviderResult<()>
     where
-        EvmConfig: ConfigureEvmEnv,
+        EvmConfig: ConfigureEvmEnv<Header = Header>,
     {
         Ok(())
     }
@@ -717,7 +741,7 @@ impl EvmEnvProvider for MockEthProvider {
         _evm_config: EvmConfig,
     ) -> ProviderResult<()>
     where
-        EvmConfig: ConfigureEvmEnv,
+        EvmConfig: ConfigureEvmEnv<Header = Header>,
     {
         Ok(())
     }

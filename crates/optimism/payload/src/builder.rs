@@ -1,20 +1,18 @@
 //! Optimism payload builder implementation.
 
-use crate::{
-    error::OptimismPayloadBuilderError,
-    payload::{OptimismBuiltPayload, OptimismPayloadBuilderAttributes},
-};
+use std::sync::Arc;
+
 use alloy_primitives::U256;
 use reth_basic_payload_builder::*;
 use reth_chain_state::ExecutedBlock;
-use reth_chainspec::{EthereumHardforks, OptimismHardfork};
+use reth_chainspec::EthereumHardforks;
 use reth_evm::{
     system_calls::pre_block_beacon_root_contract_call, ConfigureEvm, ConfigureEvmEnv,
     NextBlockEnvAttributes,
 };
 use reth_execution_types::ExecutionOutcome;
-use reth_payload_builder::error::PayloadBuilderError;
-use reth_payload_primitives::PayloadBuilderAttributes;
+use reth_optimism_forks::OptimismHardfork;
+use reth_payload_primitives::{PayloadBuilderAttributes, PayloadBuilderError};
 use reth_primitives::{
     constants::BEACON_NONCE,
     eip4844::calculate_excess_blob_gas,
@@ -33,17 +31,21 @@ use revm::{
     primitives::{EVMError, EnvWithHandlerCfg, InvalidTransaction, ResultAndState},
     DatabaseCommit, State,
 };
-use std::sync::Arc;
 use tracing::{debug, trace, warn};
+
+use crate::{
+    error::OptimismPayloadBuilderError,
+    payload::{OptimismBuiltPayload, OptimismPayloadBuilderAttributes},
+};
 
 /// Optimism's payload builder
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OptimismPayloadBuilder<EvmConfig> {
     /// The rollup's compute pending block configuration option.
     // TODO(clabby): Implement this feature.
-    compute_pending_block: bool,
+    pub compute_pending_block: bool,
     /// The type responsible for creating the evm.
-    evm_config: EvmConfig,
+    pub evm_config: EvmConfig,
 }
 
 impl<EvmConfig> OptimismPayloadBuilder<EvmConfig> {
@@ -70,11 +72,11 @@ impl<EvmConfig> OptimismPayloadBuilder<EvmConfig> {
 }
 impl<EvmConfig> OptimismPayloadBuilder<EvmConfig>
 where
-    EvmConfig: ConfigureEvmEnv,
+    EvmConfig: ConfigureEvmEnv<Header = Header>,
 {
     /// Returns the configured [`CfgEnvWithHandlerCfg`] and [`BlockEnv`] for the targeted payload
     /// (that has the `parent` as its parent).
-    fn cfg_and_block_env(
+    pub fn cfg_and_block_env(
         &self,
         config: &PayloadConfig<OptimismPayloadBuilderAttributes>,
         parent: &Header,
@@ -93,7 +95,7 @@ impl<Pool, Client, EvmConfig> PayloadBuilder<Pool, Client> for OptimismPayloadBu
 where
     Client: StateProviderFactory,
     Pool: TransactionPool,
-    EvmConfig: ConfigureEvm,
+    EvmConfig: ConfigureEvm<Header = Header>,
 {
     type Attributes = OptimismPayloadBuilderAttributes;
     type BuiltPayload = OptimismBuiltPayload;
@@ -161,7 +163,7 @@ pub(crate) fn optimism_payload<EvmConfig, Pool, Client>(
     _compute_pending_block: bool,
 ) -> Result<BuildOutcome<OptimismBuiltPayload>, PayloadBuilderError>
 where
-    EvmConfig: ConfigureEvm,
+    EvmConfig: ConfigureEvm<Header = Header>,
     Client: StateProviderFactory,
     Pool: TransactionPool,
 {
@@ -431,7 +433,7 @@ where
 
     // merge all transitions into bundle state, this would apply the withdrawal balance changes
     // and 4788 contract call
-    db.merge_transitions(BundleRetention::PlainState);
+    db.merge_transitions(BundleRetention::Reverts);
 
     let execution_outcome = ExecutionOutcome::new(
         db.take_bundle(),
@@ -442,7 +444,7 @@ where
     let receipts_root = execution_outcome
         .optimism_receipts_root_slow(
             block_number,
-            chain_spec.as_ref(),
+            &chain_spec,
             attributes.payload_attributes.timestamp,
         )
         .expect("Number is in range");
@@ -474,7 +476,10 @@ where
         excess_blob_gas = if chain_spec.is_cancun_active_at_timestamp(parent_block.timestamp) {
             let parent_excess_blob_gas = parent_block.excess_blob_gas.unwrap_or_default();
             let parent_blob_gas_used = parent_block.blob_gas_used.unwrap_or_default();
-            Some(calculate_excess_blob_gas(parent_excess_blob_gas, parent_blob_gas_used))
+            Some(calculate_excess_blob_gas(
+                parent_excess_blob_gas as u64,
+                parent_blob_gas_used as u64,
+            ))
         } else {
             // for the first post-fork block, both parent.blob_gas_used and
             // parent.excess_blob_gas are evaluated as 0
@@ -495,16 +500,16 @@ where
         logs_bloom,
         timestamp: attributes.payload_attributes.timestamp,
         mix_hash: attributes.payload_attributes.prev_randao,
-        nonce: BEACON_NONCE,
-        base_fee_per_gas: Some(base_fee),
+        nonce: BEACON_NONCE.into(),
+        base_fee_per_gas: Some(base_fee.into()),
         number: parent_block.number + 1,
-        gas_limit: block_gas_limit,
+        gas_limit: block_gas_limit.into(),
         difficulty: U256::ZERO,
-        gas_used: cumulative_gas_used,
+        gas_used: cumulative_gas_used.into(),
         extra_data,
         parent_beacon_block_root: attributes.payload_attributes.parent_beacon_block_root,
         blob_gas_used,
-        excess_blob_gas,
+        excess_blob_gas: excess_blob_gas.map(Into::into),
         requests_root: None,
     };
 

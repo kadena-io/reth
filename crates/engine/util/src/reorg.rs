@@ -1,5 +1,6 @@
 //! Stream wrapper that simulates reorgs.
 
+use alloy_primitives::U256;
 use futures::{stream::FuturesUnordered, Stream, StreamExt, TryFutureExt};
 use itertools::Either;
 use reth_beacon_consensus::{BeaconEngineMessage, BeaconOnNewPayloadError, OnForkChoiceUpdated};
@@ -9,7 +10,7 @@ use reth_ethereum_forks::EthereumHardforks;
 use reth_evm::{system_calls::apply_beacon_root_contract_call, ConfigureEvm};
 use reth_payload_validator::ExecutionPayloadValidator;
 use reth_primitives::{
-    eip4844::calculate_excess_blob_gas, proofs, Block, Header, Receipt, Receipts, U256,
+    eip4844::calculate_excess_blob_gas, proofs, Block, Header, Receipt, Receipts,
 };
 use reth_provider::{BlockReader, ExecutionOutcome, ProviderError, StateProviderFactory};
 use reth_revm::{
@@ -50,7 +51,7 @@ type ReorgResponseFut = Pin<Box<dyn Future<Output = EngineReorgResponse> + Send 
 /// Engine API stream wrapper that simulates reorgs with specified frequency.
 #[derive(Debug)]
 #[pin_project::pin_project]
-pub struct EngineReorg<S, Engine: EngineTypes, Provider, Evm> {
+pub struct EngineReorg<S, Engine: EngineTypes, Provider, Evm, Spec> {
     /// Underlying stream
     #[pin]
     stream: S,
@@ -59,7 +60,7 @@ pub struct EngineReorg<S, Engine: EngineTypes, Provider, Evm> {
     /// Evm configuration.
     evm_config: Evm,
     /// Payload validator.
-    payload_validator: ExecutionPayloadValidator,
+    payload_validator: ExecutionPayloadValidator<Spec>,
     /// The frequency of reorgs.
     frequency: usize,
     /// The depth of reorgs.
@@ -75,13 +76,13 @@ pub struct EngineReorg<S, Engine: EngineTypes, Provider, Evm> {
     reorg_responses: FuturesUnordered<ReorgResponseFut>,
 }
 
-impl<S, Engine: EngineTypes, Provider, Evm> EngineReorg<S, Engine, Provider, Evm> {
+impl<S, Engine: EngineTypes, Provider, Evm, Spec> EngineReorg<S, Engine, Provider, Evm, Spec> {
     /// Creates new [`EngineReorg`] stream wrapper.
     pub fn new(
         stream: S,
         provider: Provider,
         evm_config: Evm,
-        payload_validator: ExecutionPayloadValidator,
+        payload_validator: ExecutionPayloadValidator<Spec>,
         frequency: usize,
         depth: usize,
     ) -> Self {
@@ -100,12 +101,13 @@ impl<S, Engine: EngineTypes, Provider, Evm> EngineReorg<S, Engine, Provider, Evm
     }
 }
 
-impl<S, Engine, Provider, Evm> Stream for EngineReorg<S, Engine, Provider, Evm>
+impl<S, Engine, Provider, Evm, Spec> Stream for EngineReorg<S, Engine, Provider, Evm, Spec>
 where
     S: Stream<Item = BeaconEngineMessage<Engine>>,
     Engine: EngineTypes,
     Provider: BlockReader + StateProviderFactory,
-    Evm: ConfigureEvm,
+    Evm: ConfigureEvm<Header = Header>,
+    Spec: EthereumHardforks,
 {
     type Item = S::Item;
 
@@ -227,17 +229,18 @@ where
     }
 }
 
-fn create_reorg_head<Provider, Evm>(
+fn create_reorg_head<Provider, Evm, Spec>(
     provider: &Provider,
     evm_config: &Evm,
-    payload_validator: &ExecutionPayloadValidator,
+    payload_validator: &ExecutionPayloadValidator<Spec>,
     mut depth: usize,
     next_payload: ExecutionPayload,
     next_cancun_fields: Option<CancunPayloadFields>,
 ) -> RethResult<(ExecutionPayload, Option<CancunPayloadFields>)>
 where
     Provider: BlockReader + StateProviderFactory,
-    Evm: ConfigureEvm,
+    Evm: ConfigureEvm<Header = Header>,
+    Spec: EthereumHardforks,
 {
     let chain_spec = payload_validator.chain_spec();
 
@@ -300,7 +303,7 @@ where
     let mut versioned_hashes = Vec::new();
     for tx in candidate_transactions {
         // ensure we still have capacity for this transaction
-        if cumulative_gas_used + tx.gas_limit() > reorg_target.gas_limit {
+        if cumulative_gas_used + tx.gas_limit() > reorg_target.gas_limit as u64 {
             continue
         }
 
@@ -369,8 +372,8 @@ where
             (
                 Some(sum_blob_gas_used),
                 Some(calculate_excess_blob_gas(
-                    reorg_target_parent.excess_blob_gas.unwrap_or_default(),
-                    reorg_target_parent.blob_gas_used.unwrap_or_default(),
+                    reorg_target_parent.excess_blob_gas.unwrap_or_default() as u64,
+                    reorg_target_parent.blob_gas_used.unwrap_or_default() as u64,
                 )),
             )
         } else {
@@ -399,9 +402,9 @@ where
             receipts_root: outcome.receipts_root_slow(reorg_target.header.number).unwrap(),
             logs_bloom: outcome.block_logs_bloom(reorg_target.header.number).unwrap(),
             requests_root: None, // TODO(prague)
-            gas_used: cumulative_gas_used,
-            blob_gas_used,
-            excess_blob_gas,
+            gas_used: cumulative_gas_used.into(),
+            blob_gas_used: blob_gas_used.map(Into::into),
+            excess_blob_gas: excess_blob_gas.map(Into::into),
             state_root: state_provider.state_root(hashed_state)?,
         },
         body: transactions,

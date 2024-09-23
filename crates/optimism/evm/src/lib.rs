@@ -106,7 +106,7 @@ impl ConfigureEvmEnv for OptimismEvmConfig {
     fn fill_cfg_env(
         &self,
         cfg_env: &mut CfgEnvWithHandlerCfg,
-        header: &Header,
+        header: &Self::Header,
         total_difficulty: U256,
     ) {
         let spec_id = revm_spec(
@@ -129,7 +129,7 @@ impl ConfigureEvmEnv for OptimismEvmConfig {
 
     fn next_cfg_and_block_env(
         &self,
-        parent: &Header,
+        parent: &Self::Header,
         attributes: NextBlockEnvAttributes,
     ) -> (CfgEnvWithHandlerCfg, BlockEnv) {
         // configure evm env based on parent block
@@ -150,7 +150,7 @@ impl ConfigureEvmEnv for OptimismEvmConfig {
                     None
                 }
             })
-            .map(BlobExcessGasAndPrice::new);
+            .map(|excess_blob_gas| BlobExcessGasAndPrice::new(excess_blob_gas as u64));
 
         let block_env = BlockEnv {
             number: U256::from(parent.number + 1),

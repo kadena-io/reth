@@ -124,7 +124,7 @@ impl ConfigureEvmEnv for EthEvmConfig {
 
     fn next_cfg_and_block_env(
         &self,
-        parent: &Header,
+        parent: &Self::Header,
         attributes: NextBlockEnvAttributes,
     ) -> (CfgEnvWithHandlerCfg, BlockEnv) {
         // configure evm env based on parent block
@@ -145,7 +145,7 @@ impl ConfigureEvmEnv for EthEvmConfig {
                     None
                 }
             })
-            .map(BlobExcessGasAndPrice::new);
+            .map(|excess_blob_gas| BlobExcessGasAndPrice::new(excess_blob_gas as u64));
 
         let mut basefee = parent.next_block_base_fee(
             self.chain_spec.base_fee_params_at_timestamp(attributes.timestamp),
@@ -165,7 +165,7 @@ impl ConfigureEvmEnv for EthEvmConfig {
             gas_limit *= U256::from(elasticity_multiplier);
 
             // set the base fee to the initial base fee from the EIP-1559 spec
-            basefee = Some(EIP1559_INITIAL_BASE_FEE)
+            basefee = Some(EIP1559_INITIAL_BASE_FEE.into())
         }
 
         let block_env = BlockEnv {

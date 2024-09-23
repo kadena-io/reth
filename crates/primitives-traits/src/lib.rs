@@ -12,9 +12,6 @@
 #[macro_use]
 extern crate alloc;
 
-#[cfg(feature = "alloy-compat")]
-mod alloy_compat;
-
 /// Common constants.
 pub mod constants;
 pub use constants::gas_units::{format_gas, format_gas_throughput};
@@ -45,4 +42,4 @@ pub use storage::StorageEntry;
 pub mod header;
 #[cfg(any(test, feature = "arbitrary", feature = "test-utils"))]
 pub use header::test_utils;
-pub use header::{Header, HeaderError, SealedHeader};
+pub use header::{BlockHeader, Header, HeaderError, SealedHeader};

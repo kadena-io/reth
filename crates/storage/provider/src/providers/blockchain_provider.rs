@@ -7,22 +7,22 @@ use crate::{
     RequestsProvider, StageCheckpointReader, StateProviderBox, StateProviderFactory, StateReader,
     StaticFileProviderFactory, TransactionVariant, TransactionsProvider, WithdrawalsProvider,
 };
+use alloy_eips::{BlockHashOrNumber, BlockId, BlockNumHash, BlockNumberOrTag};
+use alloy_primitives::{Address, BlockHash, BlockNumber, TxHash, TxNumber, B256, U256};
 use alloy_rpc_types_engine::ForkchoiceState;
 use reth_chain_state::{
     BlockState, CanonicalInMemoryState, ForkChoiceNotifications, ForkChoiceSubscriptions,
     MemoryOverlayStateProvider,
 };
 use reth_chainspec::ChainInfo;
-use reth_db::Database;
 use reth_db_api::models::{AccountBeforeTx, StoredBlockBodyIndices};
 use reth_evm::ConfigureEvmEnv;
 use reth_execution_types::ExecutionOutcome;
 use reth_node_types::NodeTypesWithDB;
 use reth_primitives::{
-    Account, Address, Block, BlockHash, BlockHashOrNumber, BlockId, BlockNumHash, BlockNumber,
-    BlockNumberOrTag, BlockWithSenders, EthereumHardforks, Header, Receipt, SealedBlock,
-    SealedBlockWithSenders, SealedHeader, TransactionMeta, TransactionSigned,
-    TransactionSignedNoHash, TxHash, TxNumber, Withdrawal, Withdrawals, B256, U256,
+    alloy_primitives::Sealable, Account, Block, BlockWithSenders, EthereumHardforks, Header,
+    Receipt, SealedBlock, SealedBlockWithSenders, SealedHeader, TransactionMeta, TransactionSigned,
+    TransactionSignedNoHash, Withdrawal, Withdrawals,
 };
 use reth_prune_types::{PruneCheckpoint, PruneSegment};
 use reth_stages_types::{StageCheckpoint, StageId};
@@ -35,7 +35,7 @@ use std::{
 };
 use tracing::trace;
 
-use super::{DatabaseProvider, ProviderNodeTypes};
+use super::ProviderNodeTypes;
 
 /// The main type for interacting with the blockchain.
 ///
@@ -69,7 +69,7 @@ impl<N: ProviderNodeTypes> BlockchainProvider2<N> {
         match provider.header_by_number(best.best_number)? {
             Some(header) => {
                 drop(provider);
-                Ok(Self::with_latest(database, header.seal(best.best_hash))?)
+                Ok(Self::with_latest(database, SealedHeader::new(header, best.best_hash))?)
             }
             None => Err(ProviderError::HeaderNotFound(best.best_number.into())),
         }
@@ -186,7 +186,7 @@ impl<N: ProviderNodeTypes> BlockchainProvider2<N> {
     /// 2. The in-block transaction index.
     fn block_state_by_tx_id(
         &self,
-        provider: &DatabaseProviderRO<N::DB>,
+        provider: &DatabaseProviderRO<N::DB, N::ChainSpec>,
         id: TxNumber,
     ) -> ProviderResult<Option<(Option<Arc<BlockState>>, usize)>> {
         // Get the last block number stored in the database
@@ -264,8 +264,8 @@ impl<N: ProviderNodeTypes> BlockchainProvider2<N> {
 
 impl<N: ProviderNodeTypes> DatabaseProviderFactory for BlockchainProvider2<N> {
     type DB = N::DB;
-    type Provider = DatabaseProvider<<N::DB as Database>::TX>;
-    type ProviderRW = DatabaseProvider<<N::DB as Database>::TXMut>;
+    type Provider = <ProviderFactory<N> as DatabaseProviderFactory>::Provider;
+    type ProviderRW = <ProviderFactory<N> as DatabaseProviderFactory>::ProviderRW;
 
     fn database_provider_ro(&self) -> ProviderResult<Self::Provider> {
         self.database.database_provider_ro()
@@ -1000,7 +1000,7 @@ impl<N: ProviderNodeTypes> EvmEnvProvider for BlockchainProvider2<N> {
         evm_config: EvmConfig,
     ) -> ProviderResult<()>
     where
-        EvmConfig: ConfigureEvmEnv,
+        EvmConfig: ConfigureEvmEnv<Header = Header>,
     {
         let hash = self.convert_number(at)?.ok_or(ProviderError::HeaderNotFound(at))?;
         let header = self.header(&hash)?.ok_or(ProviderError::HeaderNotFound(at))?;
@@ -1015,7 +1015,7 @@ impl<N: ProviderNodeTypes> EvmEnvProvider for BlockchainProvider2<N> {
         evm_config: EvmConfig,
     ) -> ProviderResult<()>
     where
-        EvmConfig: ConfigureEvmEnv,
+        EvmConfig: ConfigureEvmEnv<Header = Header>,
     {
         let total_difficulty = self
             .header_td_by_number(header.number)?
@@ -1031,7 +1031,7 @@ impl<N: ProviderNodeTypes> EvmEnvProvider for BlockchainProvider2<N> {
         evm_config: EvmConfig,
     ) -> ProviderResult<()>
     where
-        EvmConfig: ConfigureEvmEnv,
+        EvmConfig: ConfigureEvmEnv<Header = Header>,
     {
         let hash = self.convert_number(at)?.ok_or(ProviderError::HeaderNotFound(at))?;
         let header = self.header(&hash)?.ok_or(ProviderError::HeaderNotFound(at))?;
@@ -1045,7 +1045,7 @@ impl<N: ProviderNodeTypes> EvmEnvProvider for BlockchainProvider2<N> {
         evm_config: EvmConfig,
     ) -> ProviderResult<()>
     where
-        EvmConfig: ConfigureEvmEnv,
+        EvmConfig: ConfigureEvmEnv<Header = Header>,
     {
         let total_difficulty = self
             .header_td_by_number(header.number)?
@@ -1229,7 +1229,7 @@ where
 
 impl<N: NodeTypesWithDB> BlockReaderIdExt for BlockchainProvider2<N>
 where
-    Self: BlockReader + BlockIdReader + ReceiptProviderIdExt,
+    Self: BlockReader + ReceiptProviderIdExt,
 {
     fn block_by_id(&self, id: BlockId) -> ProviderResult<Option<Block>> {
         match id {
@@ -1279,20 +1279,34 @@ where
                 Ok(self.canonical_in_memory_state.get_finalized_header())
             }
             BlockNumberOrTag::Safe => Ok(self.canonical_in_memory_state.get_safe_header()),
-            BlockNumberOrTag::Earliest => {
-                self.header_by_number(0)?.map_or_else(|| Ok(None), |h| Ok(Some(h.seal_slow())))
-            }
+            BlockNumberOrTag::Earliest => self.header_by_number(0)?.map_or_else(
+                || Ok(None),
+                |h| {
+                    let sealed = h.seal_slow();
+                    let (header, seal) = sealed.into_parts();
+                    Ok(Some(SealedHeader::new(header, seal)))
+                },
+            ),
             BlockNumberOrTag::Pending => Ok(self.canonical_in_memory_state.pending_sealed_header()),
-            BlockNumberOrTag::Number(num) => {
-                self.header_by_number(num)?.map_or_else(|| Ok(None), |h| Ok(Some(h.seal_slow())))
-            }
+            BlockNumberOrTag::Number(num) => self.header_by_number(num)?.map_or_else(
+                || Ok(None),
+                |h| {
+                    let sealed = h.seal_slow();
+                    let (header, seal) = sealed.into_parts();
+                    Ok(Some(SealedHeader::new(header, seal)))
+                },
+            ),
         }
     }
 
     fn sealed_header_by_id(&self, id: BlockId) -> ProviderResult<Option<SealedHeader>> {
         Ok(match id {
             BlockId::Number(num) => self.sealed_header_by_number_or_tag(num)?,
-            BlockId::Hash(hash) => self.header(&hash.block_hash)?.map(|h| h.seal_slow()),
+            BlockId::Hash(hash) => self.header(&hash.block_hash)?.map(|h| {
+                let sealed = h.seal_slow();
+                let (header, seal) = sealed.into_parts();
+                SealedHeader::new(header, seal)
+            }),
         })
     }
 
@@ -1395,6 +1409,8 @@ mod tests {
         writer::UnifiedStorageWriter,
         BlockWriter, CanonChainTracker, StaticFileProviderFactory, StaticFileWriter,
     };
+    use alloy_eips::{BlockHashOrNumber, BlockNumHash, BlockNumberOrTag};
+    use alloy_primitives::B256;
     use itertools::Itertools;
     use rand::Rng;
     use reth_chain_state::{
@@ -1407,14 +1423,14 @@ mod tests {
     use reth_db::models::{AccountBeforeTx, StoredBlockBodyIndices};
     use reth_execution_types::{Chain, ExecutionOutcome};
     use reth_primitives::{
-        BlockHashOrNumber, BlockNumHash, BlockNumberOrTag, BlockWithSenders, Receipt, SealedBlock,
-        SealedBlockWithSenders, StaticFileSegment, TransactionMeta, TransactionSignedNoHash,
-        Withdrawals, B256,
+        BlockWithSenders, Receipt, SealedBlock, SealedBlockWithSenders, StaticFileSegment,
+        TransactionMeta, TransactionSignedNoHash, Withdrawals,
     };
     use reth_storage_api::{
         BlockHashReader, BlockIdReader, BlockNumReader, BlockReader, BlockReaderIdExt, BlockSource,
-        ChangeSetReader, HeaderProvider, ReceiptProvider, ReceiptProviderIdExt, RequestsProvider,
-        StateProviderFactory, TransactionVariant, TransactionsProvider, WithdrawalsProvider,
+        ChangeSetReader, DatabaseProviderFactory, HeaderProvider, ReceiptProvider,
+        ReceiptProviderIdExt, RequestsProvider, StateProviderFactory, TransactionVariant,
+        TransactionsProvider, WithdrawalsProvider,
     };
     use reth_testing_utils::generators::{
         self, random_block, random_block_range, random_changeset_range, random_eoa_accounts,
@@ -1490,7 +1506,7 @@ mod tests {
             .collect();
 
         let factory = create_test_provider_factory_with_chain_spec(chain_spec);
-        let provider_rw = factory.provider_rw()?;
+        let provider_rw = factory.database_provider_rw()?;
 
         // Insert blocks into the database
         for block in &database_blocks {
@@ -3742,7 +3758,10 @@ mod tests {
             index: 0,
             block_hash: in_memory_blocks[0].header.hash(),
             block_number: in_memory_blocks[0].header.number,
-            base_fee: in_memory_blocks[0].header.base_fee_per_gas,
+            base_fee: in_memory_blocks[0]
+                .header
+                .base_fee_per_gas
+                .map(|base_fee_per_gas| base_fee_per_gas as u64),
             excess_blob_gas: None,
             timestamp: in_memory_blocks[0].header.timestamp,
         };
@@ -3770,7 +3789,10 @@ mod tests {
             index: 0,
             block_hash: database_blocks[0].header.hash(),
             block_number: database_blocks[0].header.number,
-            base_fee: database_blocks[0].header.base_fee_per_gas,
+            base_fee: database_blocks[0]
+                .header
+                .base_fee_per_gas
+                .map(|base_fee_per_gas| base_fee_per_gas as u64),
             excess_blob_gas: None,
             timestamp: database_blocks[0].header.timestamp,
         };

@@ -1,5 +1,12 @@
 use alloy_primitives::{Address, Bytes, B256, U256};
 use alloy_rlp::{Decodable, Encodable};
+use alloy_rpc_types::{state::EvmOverrides, Block as RpcBlock, BlockError, Bundle, StateContext};
+use alloy_rpc_types_debug::ExecutionWitness;
+use alloy_rpc_types_eth::transaction::TransactionRequest;
+use alloy_rpc_types_trace::geth::{
+    BlockTraceResult, FourByteFrame, GethDebugBuiltInTracerType, GethDebugTracerType,
+    GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace, NoopFrame, TraceResult,
+};
 use async_trait::async_trait;
 use jsonrpsee::core::RpcResult;
 use reth_chainspec::{ChainSpec, EthereumHardforks};
@@ -20,15 +27,6 @@ use reth_rpc_eth_api::{
 };
 use reth_rpc_eth_types::{EthApiError, StateCacheDb};
 use reth_rpc_server_types::{result::internal_rpc_err, ToRpcResult};
-use reth_rpc_types::{
-    debug::ExecutionWitness,
-    state::EvmOverrides,
-    trace::geth::{
-        BlockTraceResult, FourByteFrame, GethDebugBuiltInTracerType, GethDebugTracerType,
-        GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace, NoopFrame, TraceResult,
-    },
-    Block as RpcBlock, BlockError, Bundle, StateContext, TransactionRequest,
-};
 use reth_tasks::pool::BlockingTaskGuard;
 use reth_trie::{HashedPostState, HashedStorage};
 use revm::{
@@ -389,6 +387,11 @@ where
                             .await?;
                         return Ok(frame)
                     }
+                    GethDebugBuiltInTracerType::FlatCallTracer => {
+                        return Err(
+                            EthApiError::Unsupported("Flatcall tracer is not supported yet").into()
+                        )
+                    }
                 },
                 #[cfg(not(feature = "js-tracer"))]
                 GethDebugTracerType::JsTracer(_) => {
@@ -666,13 +669,10 @@ where
                 // Generate an execution witness for the aggregated state of accessed accounts.
                 // Destruct the cache database to retrieve the state provider.
                 let state_provider = db.database.into_inner();
-                let witness =
+                let state =
                     state_provider.witness(Default::default(), hashed_state).map_err(Into::into)?;
 
-                Ok(ExecutionWitness {
-                    witness,
-                    state_preimages: include_preimages.then_some(state_preimages),
-                })
+                Ok(ExecutionWitness { state, keys: include_preimages.then_some(state_preimages) })
             })
             .await
     }
@@ -754,6 +754,11 @@ where
                             .try_into_mux_frame(&res, db)
                             .map_err(Eth::Error::from_eth_err)?;
                         return Ok((frame.into(), res.state))
+                    }
+                    GethDebugBuiltInTracerType::FlatCallTracer => {
+                        return Err(
+                            EthApiError::Unsupported("Flatcall tracer is not supported yet").into()
+                        )
                     }
                 },
                 #[cfg(not(feature = "js-tracer"))]

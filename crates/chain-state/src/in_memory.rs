@@ -4,13 +4,15 @@ use crate::{
     CanonStateNotification, CanonStateNotificationSender, CanonStateNotifications,
     ChainInfoTracker, MemoryOverlayStateProvider,
 };
+use alloy_eips::BlockNumHash;
+use alloy_primitives::{Address, TxHash, B256};
 use parking_lot::RwLock;
 use reth_chainspec::ChainInfo;
 use reth_execution_types::{Chain, ExecutionOutcome};
 use reth_metrics::{metrics::Gauge, Metrics};
 use reth_primitives::{
-    Address, BlockNumHash, Header, Receipt, Receipts, SealedBlock, SealedBlockWithSenders,
-    SealedHeader, TransactionMeta, TransactionSigned, TxHash, B256,
+    Header, Receipt, Receipts, SealedBlock, SealedBlockWithSenders, SealedHeader, TransactionMeta,
+    TransactionSigned,
 };
 use reth_storage_api::StateProviderBox;
 use reth_trie::{updates::TrieUpdates, HashedPostState};
@@ -567,9 +569,18 @@ impl CanonicalInMemoryState {
                     index: index as u64,
                     block_hash: block_state.hash(),
                     block_number: block_state.block().block.number,
-                    base_fee: block_state.block().block().header.base_fee_per_gas,
+                    base_fee: block_state
+                        .block()
+                        .block()
+                        .header
+                        .base_fee_per_gas
+                        .map(|base_fee| base_fee as u64),
                     timestamp: block_state.block().block.timestamp,
-                    excess_blob_gas: block_state.block().block.excess_blob_gas,
+                    excess_blob_gas: block_state
+                        .block()
+                        .block
+                        .excess_blob_gas
+                        .map(|excess_blob| excess_blob as u64),
                 };
                 return Some((tx.clone(), meta))
             }
@@ -830,11 +841,10 @@ impl NewCanonicalChain {
 mod tests {
     use super::*;
     use crate::test_utils::TestBlockBuilder;
+    use alloy_primitives::{BlockNumber, Bytes, StorageKey, StorageValue};
     use rand::Rng;
     use reth_errors::ProviderResult;
-    use reth_primitives::{
-        Account, BlockNumber, Bytecode, Bytes, Receipt, Requests, StorageKey, StorageValue,
-    };
+    use reth_primitives::{Account, Bytecode, Receipt, Requests};
     use reth_storage_api::{
         AccountReader, BlockHashReader, StateProofProvider, StateProvider, StateRootProvider,
         StorageRootProvider,

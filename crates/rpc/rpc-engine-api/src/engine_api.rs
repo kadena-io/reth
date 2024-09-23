@@ -1,6 +1,7 @@
 use crate::{
     capabilities::EngineCapabilities, metrics::EngineApiMetrics, EngineApiError, EngineApiResult,
 };
+use alloy_eips::eip4844::BlobAndProofV1;
 use alloy_primitives::{BlockHash, BlockNumber, B256, U64};
 use async_trait::async_trait;
 use jsonrpsee_core::RpcResult;
@@ -15,14 +16,11 @@ use reth_payload_primitives::{
 };
 use reth_primitives::{Block, BlockHashOrNumber, EthereumHardfork};
 use reth_rpc_api::EngineApiServer;
-use reth_rpc_types::{
-    engine::{
-        CancunPayloadFields, ClientVersionV1, ExecutionPayload, ExecutionPayloadBodiesV1,
-        ExecutionPayloadBodiesV2, ExecutionPayloadInputV2, ExecutionPayloadV1, ExecutionPayloadV3,
-        ExecutionPayloadV4, ForkchoiceState, ForkchoiceUpdated, PayloadId, PayloadStatus,
-        TransitionConfiguration,
-    },
-    BlobAndProofV1,
+use reth_rpc_types::engine::{
+    CancunPayloadFields, ClientVersionV1, ExecutionPayload, ExecutionPayloadBodiesV1,
+    ExecutionPayloadBodiesV2, ExecutionPayloadInputV2, ExecutionPayloadV1, ExecutionPayloadV3,
+    ExecutionPayloadV4, ForkchoiceState, ForkchoiceUpdated, PayloadId, PayloadStatus,
+    TransitionConfiguration,
 };
 use reth_rpc_types_compat::engine::payload::{
     convert_payload_input_v2_to_payload, convert_to_payload_body_v1, convert_to_payload_body_v2,
@@ -73,7 +71,7 @@ struct EngineApiInner<Provider, EngineT: EngineTypes, Pool> {
 impl<Provider, EngineT, Pool> EngineApi<Provider, EngineT, Pool>
 where
     Provider: HeaderProvider + BlockReader + StateProviderFactory + EvmEnvProvider + 'static,
-    EngineT: EngineTypes,
+    EngineT: EngineTypes<ChainSpec = ChainSpec>,
     Pool: TransactionPool + 'static,
 {
     /// Create new instance of [`EngineApi`].
@@ -624,7 +622,7 @@ where
 impl<Provider, EngineT, Pool> EngineApiServer<EngineT> for EngineApi<Provider, EngineT, Pool>
 where
     Provider: HeaderProvider + BlockReader + StateProviderFactory + EvmEnvProvider + 'static,
-    EngineT: EngineTypes,
+    EngineT: EngineTypes<ChainSpec = ChainSpec>,
     Pool: TransactionPool + 'static,
 {
     /// Handler for `engine_newPayloadV1`
