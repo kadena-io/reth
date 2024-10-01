@@ -81,7 +81,7 @@ kurtosis run github.com/ethpandaops/ethereum-package \
          --image-download always
 #+end_src
 
-* Run a custo build of reth
+* Running a custom build of reth
 
 Assuming that you built and tested reth above using cargo, next you must have
 Docker installed and build a local container with your version of reth using
