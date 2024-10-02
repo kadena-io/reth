@@ -2,7 +2,7 @@
 #![allow(missing_docs, rustdoc::missing_crate_level_docs)]
 // The `chainweb` feature must be enabled to use this crate.
 #![cfg(feature = "chainweb")]
-
+/*
 use clap::Parser;
 use reth_node_builder::{engine_tree_config::TreeConfig, EngineNodeLauncher};
 use reth_node_optimism::{args::RollupArgs, node::OptimismAddOns, OptimismNode};
@@ -12,7 +12,7 @@ use reth_provider::providers::BlockchainProvider2;
 
 #[global_allocator]
 static ALLOC: reth_cli_util::allocator::Allocator = reth_cli_util::allocator::new_allocator();
-
+*/
 fn main() {
     reth_cli_util::sigsegv_handler::install();
 
@@ -20,7 +20,7 @@ fn main() {
     if std::env::var_os("RUST_BACKTRACE").is_none() {
         std::env::set_var("RUST_BACKTRACE", "1");
     }
-
+    /*
     if let Err(err) =
         Cli::<OpChainSpecParser, RollupArgs>::parse().run(|builder, rollup_args| async move {
             let enable_engine2 = rollup_args.experimental;
@@ -80,4 +80,6 @@ fn main() {
         eprintln!("Error: {err:?}");
         std::process::exit(1);
     }
+    */
+    println!("Hello Reth!");
 }
