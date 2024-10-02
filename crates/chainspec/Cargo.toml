@@ -54,10 +54,9 @@ optimism = [
     "dep:op-alloy-rpc-types",
     "reth-optimism-forks",
 ]
+chainweb = []
 std = []
 arbitrary = [
     "alloy-chains/arbitrary"
 ]
 test-utils = []
-
-
