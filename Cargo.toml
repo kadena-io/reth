@@ -17,6 +17,7 @@ members = [
     "crates/chainspec/",
     "crates/chainweb/bin",
     "crates/chainweb/chainspec",
+    "crates/chainweb/cli",
     "crates/cli/cli/",
     "crates/cli/commands/",
     "crates/cli/runner/",
@@ -367,6 +368,7 @@ reth-node-types = { path = "crates/node/types" }
 reth-optimism-chainspec = { path = "crates/optimism/chainspec" }
 reth-chainweb-chainspec = { path = "crates/chainweb/chainspec" }
 reth-optimism-cli = { path = "crates/optimism/cli" }
+reth-chainweb-cli = { path = "crates/chainweb/cli" }
 reth-optimism-consensus = { path = "crates/optimism/consensus" }
 reth-optimism-forks = { path = "crates/optimism/hardforks" }
 reth-optimism-payload-builder = { path = "crates/optimism/payload" }

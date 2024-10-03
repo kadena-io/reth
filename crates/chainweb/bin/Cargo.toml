@@ -11,10 +11,11 @@ exclude.workspace = true
 [dependencies]
 reth-node-builder.workspace = true
 reth-cli-util.workspace = true
-reth-optimism-cli.workspace = true
+reth-cli.workspace = true
+reth-chainweb-cli.workspace = true
 reth-provider.workspace = true
-reth-optimism-rpc.workspace = true
-reth-node-optimism.workspace = true
+# reth-optimism-rpc.workspace = true
+# reth-node-optimism.workspace = true
 
 clap = { workspace = true, features = ["derive", "env"] }
 
@@ -32,7 +33,7 @@ tracy-allocator = ["reth-cli-util/tracy-allocator"]
 
 # optimism = ["reth-optimism-cli/optimism", "reth-node-optimism/optimism"]
 
-chainweb = []
+chainweb = ["reth-chainweb-cli/optimism"]
 
 [[bin]]
 name = "cw-reth"

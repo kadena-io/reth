@@ -9,6 +9,9 @@
 
 extern crate alloc;
 
+mod dev;
+
+pub use dev::CW_DEV;
 /*
 
 mod base;
