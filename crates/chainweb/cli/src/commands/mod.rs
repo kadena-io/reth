@@ -20,6 +20,12 @@ pub enum Commands<
     /// Start the node
     #[command(name = "node")]
     Node(Box<node::NodeCommand<Spec, Ext>>),
+    /// Initialize the database from a genesis file.
+    #[command(name = "init")]
+    Init(init_cmd::InitCommand<Spec>),
+    /// Initialize the database from a state dump file.
+    // #[command(name = "init-state")]
+    // InitState(init_state::InitStateCommand<Spec>),
     /// Dumps genesis block JSON configuration to stdout.
     DumpGenesis(dump_genesis::DumpGenesisCommand<Spec>),
     /// Database debugging utilities

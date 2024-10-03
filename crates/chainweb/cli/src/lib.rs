@@ -123,9 +123,10 @@ where
             Commands::Node(command) => {
                 runner.run_command_until_exit(|ctx| command.execute(ctx, launcher))
             }
-            // Commands::Init(command) => {
-            // runner.run_blocking_until_ctrl_c(command.execute::<OptimismNode>())
-            // }
+            Commands::Init(command) => {
+                // runner.run_blocking_until_ctrl_c(command.execute::<OptimismNode>())
+                Ok(())
+            }
             /*
             Commands::InitState(command) => {
                 runner.run_blocking_until_ctrl_c(command.execute::<OptimismNode>())
