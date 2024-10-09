@@ -4,9 +4,8 @@
 #![cfg(feature = "chainweb")]
 
 use clap::Parser;
-use reth_node_builder::{engine_tree_config::TreeConfig, EngineNodeLauncher};
-//use reth_node_optimism::{args::RollupArgs, node::OptimismAddOns, OptimismNode};
 use reth_chainweb_cli::{chainspec::CwChainSpecParser, Cli};
+use reth_node_chainweb::CwEthereumNode;
 
 //use reth_provider::providers::BlockchainProvider2;
 
@@ -21,7 +20,7 @@ fn main() {
         std::env::set_var("RUST_BACKTRACE", "1");
     }
 
-    if let Err(err) = Cli::<CwChainSpecParser>::parse().run(|builder, args| async move {
+    if let Err(err) = Cli::<CwChainSpecParser>::parse().run(|builder, _args| async move {
         /*
         let enable_engine2 = rollup_args.experimental;
         let sequencer_http_arg = rollup_args.sequencer_http.clone();
@@ -76,8 +75,12 @@ fn main() {
             }
         }*/
 
-        println!("Hello Reth!");
-        Ok(())
+        //let handle = builder.launch_node(CwEthereumNode::default()).await?;
+        //handle.node_exit_future.await;
+
+        let handle = builder.node(CwEthereumNode::default()).launch().await?;
+
+        handle.node_exit_future.await
     }) {
         eprintln!("Error: {err:?}");
         std::process::exit(1);

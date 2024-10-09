@@ -1,4 +1,4 @@
-use alloy_genesis::Genesis;
+// use alloy_genesis::Genesis;
 use reth_chainspec::ChainSpec;
 use reth_chainweb_chainspec::{CwChainSpec, CW_DEV};
 use reth_cli::chainspec::ChainSpecParser;

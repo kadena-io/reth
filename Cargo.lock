@@ -2171,6 +2171,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-reth"
+version = "1.0.7"
+dependencies = [
+ "clap",
+ "reth-chainweb-cli",
+ "reth-cli-util",
+ "reth-node-chainweb",
+]
+
+[[package]]
 name = "darling"
 version = "0.20.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6473,6 +6483,46 @@ dependencies = [
 ]
 
 [[package]]
+name = "reth-chainweb-chainspec"
+version = "1.0.7"
+dependencies = [
+ "alloy-chains",
+ "alloy-genesis",
+ "alloy-primitives",
+ "derive_more",
+ "once_cell",
+ "op-alloy-rpc-types",
+ "reth-chainspec",
+ "reth-ethereum-forks",
+ "reth-primitives-traits",
+ "serde_json",
+]
+
+[[package]]
+name = "reth-chainweb-cli"
+version = "1.0.7"
+dependencies = [
+ "clap",
+ "eyre",
+ "futures-util",
+ "reth-chainspec",
+ "reth-chainweb-chainspec",
+ "reth-cli",
+ "reth-cli-commands",
+ "reth-cli-runner",
+ "reth-db",
+ "reth-db-common",
+ "reth-node-builder",
+ "reth-node-chainweb",
+ "reth-node-core",
+ "reth-node-ethereum",
+ "reth-stages",
+ "reth-tracing",
+ "tempfile",
+ "tracing",
+]
+
+[[package]]
 name = "reth-cli"
 version = "1.0.7"
 dependencies = [
@@ -7782,6 +7832,45 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tracing",
+]
+
+[[package]]
+name = "reth-node-chainweb"
+version = "1.0.7"
+dependencies = [
+ "alloy-genesis",
+ "alloy-primitives",
+ "eyre",
+ "futures",
+ "futures-util",
+ "reth",
+ "reth-auto-seal-consensus",
+ "reth-basic-payload-builder",
+ "reth-chainspec",
+ "reth-consensus",
+ "reth-db",
+ "reth-e2e-test-utils",
+ "reth-engine-primitives",
+ "reth-ethereum-engine-primitives",
+ "reth-ethereum-payload-builder",
+ "reth-evm-ethereum",
+ "reth-exex",
+ "reth-network",
+ "reth-node-api",
+ "reth-node-builder",
+ "reth-node-core",
+ "reth-payload-builder",
+ "reth-payload-primitives",
+ "reth-primitives",
+ "reth-provider",
+ "reth-rpc",
+ "reth-rpc-types",
+ "reth-tasks",
+ "reth-tracing",
+ "reth-transaction-pool",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

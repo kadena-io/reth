@@ -1,3 +1,5 @@
+//! Chainweb Reth CLI commands
+
 use crate::chainspec::CwChainSpecParser;
 use clap::Subcommand;
 //use import::ImportOpCommand;
@@ -5,7 +7,7 @@ use clap::Subcommand;
 use reth_chainspec::ChainSpec;
 use reth_cli::chainspec::ChainSpecParser;
 use reth_cli_commands::{
-    config_cmd, db, dump_genesis, init_cmd,
+    config_cmd, db, dump_genesis, init_cmd, init_state,
     node::{self, NoArgs},
     p2p, prune, recover, stage,
 };
@@ -24,8 +26,8 @@ pub enum Commands<
     #[command(name = "init")]
     Init(init_cmd::InitCommand<Spec>),
     /// Initialize the database from a state dump file.
-    // #[command(name = "init-state")]
-    // InitState(init_state::InitStateCommand<Spec>),
+    #[command(name = "init-state")]
+    InitState(init_state::InitStateCommand<Spec>),
     /// Dumps genesis block JSON configuration to stdout.
     DumpGenesis(dump_genesis::DumpGenesisCommand<Spec>),
     /// Database debugging utilities

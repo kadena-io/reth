@@ -27,11 +27,12 @@ use reth_cli_runner::CliRunner;
 use reth_db::DatabaseEnv;
 //use reth_evm_optimism::OpExecutorProvider;
 use reth_node_builder::{NodeBuilder, WithLaunchContext};
+use reth_node_chainweb::CwEthereumNode;
 use reth_node_core::{
     args::LogArgs,
     version::{LONG_VERSION, SHORT_VERSION},
 };
-//use reth_node_optimism::OptimismNode;
+use reth_node_ethereum::EthExecutorProvider;
 use reth_tracing::FileWorkerGuard;
 use tracing::info;
 
@@ -124,45 +125,37 @@ where
                 runner.run_command_until_exit(|ctx| command.execute(ctx, launcher))
             }
             Commands::Init(command) => {
-                // runner.run_blocking_until_ctrl_c(command.execute::<OptimismNode>())
-                Ok(())
+                runner.run_blocking_until_ctrl_c(command.execute::<CwEthereumNode>())
+            }
+            Commands::InitState(command) => {
+                runner.run_blocking_until_ctrl_c(command.execute::<CwEthereumNode>())
             }
             /*
-            Commands::InitState(command) => {
-                runner.run_blocking_until_ctrl_c(command.execute::<OptimismNode>())
-            }
             Commands::ImportOp(command) => {
-                runner.run_blocking_until_ctrl_c(command.execute::<OptimismNode>())
+                runner.run_blocking_until_ctrl_c(command.execute::<CwEthereumNode>())
             }
             Commands::ImportReceiptsOp(command) => {
-                runner.run_blocking_until_ctrl_c(command.execute::<OptimismNode>())
+                runner.run_blocking_until_ctrl_c(command.execute::<CwEthereumNode>())
             }
             */
             Commands::DumpGenesis(command) => runner.run_blocking_until_ctrl_c(command.execute()),
 
             Commands::Db(command) => {
-                Ok(())
-                //runner.run_blocking_until_ctrl_c(command.execute::<OptimismNode>())
+                runner.run_blocking_until_ctrl_c(command.execute::<CwEthereumNode>())
             }
-            Commands::Stage(command) =>
-            //runner.run_command_until_exit(|ctx| {
-            {
-                Ok(())
-                //command.execute::<OptimismNode, _, _>(ctx, OpExecutorProvider::optimism)
-                //}),
-            }
+            Commands::Stage(command) => runner.run_command_until_exit(|ctx| {
+                command.execute::<CwEthereumNode, _, _>(ctx, EthExecutorProvider::ethereum)
+            }),
 
             Commands::P2P(command) => runner.run_until_ctrl_c(command.execute()),
 
             Commands::Config(command) => runner.run_until_ctrl_c(command.execute()),
 
             Commands::Recover(command) => {
-                Ok(())
-                //runner.run_command_until_exit(|ctx| command.execute::<OptimismNode>(ctx))
+                runner.run_command_until_exit(|ctx| command.execute::<CwEthereumNode>(ctx))
             }
             Commands::Prune(command) => {
-                Ok(())
-                //runner.run_until_ctrl_c(command.execute::<OptimismNode>())}
+                runner.run_until_ctrl_c(command.execute::<CwEthereumNode>())
             }
         }
     }

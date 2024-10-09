@@ -18,6 +18,7 @@ members = [
     "crates/chainweb/bin",
     "crates/chainweb/chainspec",
     "crates/chainweb/cli",
+    "crates/chainweb/node",
     "crates/cli/cli/",
     "crates/cli/commands/",
     "crates/cli/runner/",
@@ -364,6 +365,7 @@ reth-node-ethereum = { path = "crates/ethereum/node" }
 reth-node-events = { path = "crates/node/events" }
 reth-node-metrics = { path = "crates/node/metrics" }
 reth-node-optimism = { path = "crates/optimism/node" }
+reth-node-chainweb = { path = "crates/chainweb/node" }
 reth-node-types = { path = "crates/node/types" }
 reth-optimism-chainspec = { path = "crates/optimism/chainspec" }
 reth-chainweb-chainspec = { path = "crates/chainweb/chainspec" }
