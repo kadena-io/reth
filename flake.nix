@@ -28,8 +28,8 @@
           buildInputs = [
             openssl
             pkg-config
-            eza
-            fd
+            gdb
+            lldb
             (rust-bin.beta.latest.default.override {
                extensions = [ "rust-src" ];
              })
@@ -37,11 +37,6 @@
             darwin.apple_sdk.frameworks.Security
             darwin.apple_sdk.frameworks.CoreServices
           ];
-
-          shellHook = ''
-            alias ls=eza
-            alias find=fd
-          '';
         };
       }
     );
