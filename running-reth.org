@@ -1,0 +1,119 @@
+:PROPERTIES:
+:ID:       1A5FBDA7-D4E5-4E42-97C4-02CD1A2D61CF
+:CREATED:  [2024-09-30 Mon 15:54]
+:END:
+#+title: Running reth on local Ethereum testnet
+
+* Clone and build reth
+
+After running the following steps to clone, build and test the reth codebase,
+you should be able to proceed to the next step and start running a reth node.
+
+** Using Nix
+
+The simplest way to get the correct build environment running on your machine
+is using Nix. This requires only the following commands:
+
+#+begin_src sh
+git clone git@github.com:jwiegley/reth.git
+cd reth
+nix develop
+cargo build
+cargo test
+#+end_src
+
+** Using rustup
+
+If you do not wish to use Nix, you can install Rust yourself using [[https://rustup.rs/][rustup]]:
+
+#+begin_src sh
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup update
+#+end_src
+
+Then clone from the Reth repository directly and build using your newly
+installed =cargo= and =rustc=:
+
+#+begin_src sh
+git clone git@github.com:paradigmxyz/reth.git
+cd reth
+cargo build
+cargo test
+#+end_src
+
+* Install Docker and Kurtosis
+
+Since I am running on macOS, I used these commands to install [[https://www.docker.com/][Docker]] and
+[[https://docs.kurtosis.com/install/][Kurtosis]]:
+
+#+begin_src sh
+brew install --cask docker
+brew install kurtosis-tech/tap/kurtosis-cli
+#+end_src
+
+I recommend [[https://ethpandaops.io/posts/kurtosis-deep-dive][reading about Kurtosis]] for setting up development environments, as
+it standarizes many of the aspects necessary for setting up an Ethereum
+tesnet.
+
+* Create network topology
+
+Create a YAML file named =network_params.yaml=. For now we will used the
+default, GitHub version of reth, but later we will modify this file to point
+to our own, custom checkout.
+
+#+begin_src yaml
+participants:
+  - el_type: reth
+    el_image: ghcr.io/paradigmxyz/reth
+    cl_type: lighthouse
+    cl_image: sigp/lighthouse:latest
+  - el_type: reth
+    el_image: ghcr.io/paradigmxyz/reth
+    cl_type: teku
+    cl_image: consensys/teku:latest
+#+end_src
+
+* Start the network
+
+Make sure first that Docker is running, and then run Kurtosis to start the
+components of the network topology:
+
+#+begin_src sh
+kurtosis run github.com/ethpandaops/ethereum-package \
+         --args-file ./network_params.yaml \
+         --image-download always
+#+end_src
+
+* Running a custom build of reth
+
+Assuming that you built and tested reth above using cargo, next you must have
+Docker installed and build a local container with your version of reth using
+this command:
+
+#+begin_src sh
+docker build . -t reth:local
+docker run reth:local --version
+#+end_src
+
+You can now stop the kurtosis environment that you started above:
+
+#+begin_src sh
+kurtosis engine stop
+#+end_src
+
+Now edit the =network_params.yaml= file, and change the el_image for one of the
+network participants:
+
+#+begin_src yaml
+participants:
+  - el_type: reth
+    el_image: reth:local
+    cl_type: lighthouse
+    cl_image: sigp/lighthouse:latest
+  - el_type: reth
+    el_image: ghcr.io/paradigmxyz/reth
+    cl_type: teku
+    cl_image: consensys/teku:latest
+#+end_src
+
+Now restart the network using the same command above for running kurtosis.
