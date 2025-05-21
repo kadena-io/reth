@@ -459,7 +459,8 @@ op-revm = { version = "5.0.0", default-features = false }
 revm-inspectors = "0.23.0"
 
 # eth
-alloy-chains = { version = "0.2.0", default-features = false }
+# alloy-chains = { version = "0.2.0", default-features = false }
+alloy-chains = { git = "https://github.com/kadena-io/alloy-rs-chains", branch = "kadena-chains", default-features = false }
 alloy-dyn-abi = "1.1.0"
 alloy-eip2124 = { version = "0.2.0", default-features = false }
 alloy-evm = { version = "0.10", default-features = false }

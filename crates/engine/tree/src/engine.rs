@@ -226,6 +226,8 @@ pub enum EngineApiKind {
     Ethereum,
     /// The chain contains Optimism configuration.
     OpStack,
+    /// The chain contains Chainweb configuration.
+    Chainweb,
 }
 
 impl EngineApiKind {
@@ -234,9 +236,14 @@ impl EngineApiKind {
         matches!(self, Self::Ethereum)
     }
 
-    /// Returns true if this is the ethereum variant
+    /// Returns true if this is the opstack variant
     pub const fn is_opstack(&self) -> bool {
         matches!(self, Self::OpStack)
+    }
+
+    /// Returns true if this is the chainweb variant
+    pub const fn is_chainweb(&self) -> bool {
+        matches!(self, Self::Chainweb)
     }
 }
 
