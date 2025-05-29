@@ -97,17 +97,6 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
 name = "alloy-chains"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "517e5acbd38b6d4c59da380e8bbadc6d365bf001903ce46cf5521c53c647e07b"
-dependencies = [
- "alloy-primitives",
- "num_enum",
- "strum 0.27.1",
-]
-
-[[package]]
-name = "alloy-chains"
 version = "0.2.1"
 source = "git+https://github.com/kadena-io/alloy-rs-chains?branch=kadena-chains#4ee8f69fcc570d3f37dcf088e723015bc90f9387"
 dependencies = [
@@ -117,6 +106,17 @@ dependencies = [
  "num_enum",
  "proptest",
  "serde",
+ "strum 0.27.1",
+]
+
+[[package]]
+name = "alloy-chains"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "517e5acbd38b6d4c59da380e8bbadc6d365bf001903ce46cf5521c53c647e07b"
+dependencies = [
+ "alloy-primitives",
+ "num_enum",
  "strum 0.27.1",
 ]
 
@@ -303,7 +303,7 @@ version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d49ebd18eef287ae48628d03436d32f3645cbcc0a2233e89127321094564abab"
 dependencies = [
- "alloy-chains 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "alloy-chains 0.2.2",
  "alloy-eip2124",
  "alloy-primitives",
  "auto_impl",
@@ -441,7 +441,7 @@ version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d84eba1fd8b6fe8b02f2acd5dd7033d0f179e304bd722d11e817db570d1fa6c4"
 dependencies = [
- "alloy-chains 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "alloy-chains 0.2.2",
  "alloy-consensus",
  "alloy-eips",
  "alloy-json-rpc",
@@ -7207,7 +7207,7 @@ dependencies = [
 name = "reth-chainspec"
 version = "1.4.4"
 dependencies = [
- "alloy-chains 0.2.1 (git+https://github.com/kadena-io/alloy-rs-chains?branch=kadena-chains)",
+ "alloy-chains 0.2.1",
  "alloy-consensus",
  "alloy-eips",
  "alloy-evm",
@@ -7241,7 +7241,7 @@ name = "reth-cli-commands"
 version = "1.4.4"
 dependencies = [
  "ahash",
- "alloy-chains 0.2.1 (git+https://github.com/kadena-io/alloy-rs-chains?branch=kadena-chains)",
+ "alloy-chains 0.2.1",
  "alloy-consensus",
  "alloy-eips",
  "alloy-primitives",
@@ -7608,7 +7608,7 @@ dependencies = [
 name = "reth-dns-discovery"
 version = "1.4.4"
 dependencies = [
- "alloy-chains 0.2.1 (git+https://github.com/kadena-io/alloy-rs-chains?branch=kadena-chains)",
+ "alloy-chains 0.2.1",
  "alloy-primitives",
  "alloy-rlp",
  "data-encoding",
@@ -8000,7 +8000,7 @@ dependencies = [
 name = "reth-eth-wire"
 version = "1.4.4"
 dependencies = [
- "alloy-chains 0.2.1 (git+https://github.com/kadena-io/alloy-rs-chains?branch=kadena-chains)",
+ "alloy-chains 0.2.1",
  "alloy-consensus",
  "alloy-eips",
  "alloy-primitives",
@@ -8038,7 +8038,7 @@ dependencies = [
 name = "reth-eth-wire-types"
 version = "1.4.4"
 dependencies = [
- "alloy-chains 0.2.1 (git+https://github.com/kadena-io/alloy-rs-chains?branch=kadena-chains)",
+ "alloy-chains 0.2.1",
  "alloy-consensus",
  "alloy-eips",
  "alloy-genesis",
@@ -8993,7 +8993,7 @@ dependencies = [
 name = "reth-optimism-chainspec"
 version = "1.4.4"
 dependencies = [
- "alloy-chains 0.2.1 (git+https://github.com/kadena-io/alloy-rs-chains?branch=kadena-chains)",
+ "alloy-chains 0.2.1",
  "alloy-consensus",
  "alloy-eips",
  "alloy-genesis",
@@ -9067,7 +9067,7 @@ dependencies = [
 name = "reth-optimism-consensus"
 version = "1.4.4"
 dependencies = [
- "alloy-chains 0.2.1 (git+https://github.com/kadena-io/alloy-rs-chains?branch=kadena-chains)",
+ "alloy-chains 0.2.1",
  "alloy-consensus",
  "alloy-eips",
  "alloy-primitives",
