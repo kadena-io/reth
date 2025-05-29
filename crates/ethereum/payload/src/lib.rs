@@ -334,6 +334,8 @@ where
         .then_some(execution_result.requests);
 
     let sealed_block = Arc::new(block.sealed_block().clone());
+    // force computation of the block hash, so that it appears in the logs
+    sealed_block.sealed_header().hash();
     debug!(target: "payload_builder", id=%attributes.id, sealed_block_header = ?sealed_block.sealed_header(), "sealed built block");
 
     let payload = EthBuiltPayload::new(attributes.id, sealed_block, total_fees, requests)
