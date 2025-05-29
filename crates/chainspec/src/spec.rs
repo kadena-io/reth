@@ -341,6 +341,12 @@ impl ChainSpec {
         self.chain == Chain::optimism_mainnet()
     }
 
+    /// Returns `true` if this chain contains Chainweb configuration.
+    #[inline]
+    pub const fn is_chainweb(&self) -> bool {
+        self.chain.is_chainweb()
+    }
+
     /// Returns the known paris block, if it exists.
     #[inline]
     pub fn paris_block(&self) -> Option<u64> {

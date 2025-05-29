@@ -91,7 +91,12 @@ where
         C: ConfigureEvm<Primitives = N::Primitives> + 'static,
     {
         let engine_kind =
-            if chain_spec.is_optimism() { EngineApiKind::OpStack } else { EngineApiKind::Ethereum };
+            if chain_spec.is_optimism()
+                { EngineApiKind::OpStack }
+            else if chain_spec.is_chainweb()
+                { EngineApiKind::Chainweb }
+            else
+                { EngineApiKind::Ethereum };
 
         let downloader = BasicBlockDownloader::new(client, consensus.clone());
 

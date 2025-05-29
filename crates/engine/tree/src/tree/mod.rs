@@ -393,6 +393,7 @@ where
         evm_config: C,
     ) -> (Sender<FromEngine<EngineApiRequest<T, N>, N::Block>>, UnboundedReceiver<EngineApiEvent<N>>)
     {
+        info!(target: "engine::tree", kind=?kind, "Spawning new EngineApiTreeHandler task");
         let best_block_number = provider.best_block_number().unwrap_or(0);
         let header = provider.sealed_header(best_block_number).ok().flatten().unwrap_or_default();
 
@@ -882,7 +883,7 @@ where
 
             // For OpStack the proposers are allowed to reorg their own chain at will, so we need to
             // always trigger a new payload job if requested.
-            if self.engine_kind.is_opstack() {
+            if self.engine_kind.is_opstack() || self.engine_kind.is_chainweb() {
                 if let Some(attr) = attrs {
                     debug!(target: "engine::tree", head = canonical_header.number(), "handling payload attributes for canonical head");
                     let updated =
