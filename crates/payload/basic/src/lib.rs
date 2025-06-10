@@ -160,7 +160,7 @@ where
                 .ok_or_else(|| PayloadBuilderError::MissingParentHeader(attributes.parent()))?
         };
 
-        let config = PayloadConfig::new(Arc::new(parent_header.clone()), attributes);
+        let config = PayloadConfig::new(Arc::new(parent_header.clone()), attributes, self.config.keep_payload_jobs_alive);
 
         let deadline = self.job_deadline(config.attributes.timestamp()).map
             (|job_deadline| Box::pin(tokio::time::sleep_until(job_deadline)));
@@ -250,6 +250,7 @@ pub struct BasicPayloadJobGeneratorConfig {
     deadline: Option<Duration>,
     /// Maximum number of tasks to spawn for building a payload.
     max_payload_tasks: usize,
+    keep_payload_jobs_alive: KeepPayloadJobAlive
 }
 
 // === impl BasicPayloadJobGeneratorConfig ===
@@ -283,6 +284,19 @@ impl BasicPayloadJobGeneratorConfig {
         self.max_payload_tasks = max_payload_tasks;
         self
     }
+
+    /// Keep payload jobs alive after they return a payload.
+    pub const fn keep_payload_jobs_alive(mut self) -> Self {
+        self.keep_payload_jobs_alive = KeepPayloadJobAlive::Yes;
+        self
+    }
+
+    /// Do not keep payload jobs alive after they return a payload.
+    pub const fn do_not_keep_payload_jobs_alive(mut self) -> Self {
+        self.keep_payload_jobs_alive = KeepPayloadJobAlive::No;
+        self
+    }
+
 }
 
 impl Default for BasicPayloadJobGeneratorConfig {
@@ -292,6 +306,7 @@ impl Default for BasicPayloadJobGeneratorConfig {
             // 12s slot time
             deadline: Some(SLOT_DURATION),
             max_payload_tasks: 3,
+            keep_payload_jobs_alive: KeepPayloadJobAlive::No
         }
     }
 }
@@ -529,7 +544,7 @@ where
             empty_payload: empty_payload.filter(|_| kind != PayloadKind::WaitForPending),
         };
 
-        (fut, KeepPayloadJobAlive::No)
+        (fut, self.config.keep_alive)
     }
 }
 
@@ -673,6 +688,9 @@ pub struct PayloadConfig<Attributes, Header = alloy_consensus::Header> {
     pub parent_header: Arc<SealedHeader<Header>>,
     /// Requested attributes for the payload.
     pub attributes: Attributes,
+    /// Whether to keep the payload job alive after the CL has requested a
+    /// payload.
+    pub keep_alive: KeepPayloadJobAlive,
 }
 
 impl<Attributes, Header> PayloadConfig<Attributes, Header>
@@ -680,8 +698,8 @@ where
     Attributes: PayloadBuilderAttributes,
 {
     /// Create new payload config.
-    pub const fn new(parent_header: Arc<SealedHeader<Header>>, attributes: Attributes) -> Self {
-        Self { parent_header, attributes }
+    pub const fn new(parent_header: Arc<SealedHeader<Header>>, attributes: Attributes, keep_alive: KeepPayloadJobAlive) -> Self {
+        Self { parent_header, attributes, keep_alive }
     }
 
     /// Returns the payload id.
