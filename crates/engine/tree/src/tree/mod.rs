@@ -885,6 +885,7 @@ where
             // if self.engine_kind.is_opstack() || self.engine_kind.is_chainweb() {
             // FIXME FIXME FIXME
             if true {
+                debug!(target: "engine::tree", head = canonical_header.number(), "opstack or chainweb, triggering payload job on canonical head");
                 if let Some(attr) = attrs {
                     debug!(target: "engine::tree", head = canonical_header.number(), "handling payload attributes for canonical head");
                     let updated =
@@ -892,6 +893,7 @@ where
                     return Ok(TreeOutcome::new(updated))
                 }
             }
+            debug!(target: "engine::tree", head = canonical_header.number(), "skipping payload production for canonical head");
 
             // 2. Client software MAY skip an update of the forkchoice state and MUST NOT begin a
             //    payload build process if `forkchoiceState.headBlockHash` references a `VALID`
