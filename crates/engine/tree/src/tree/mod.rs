@@ -883,7 +883,9 @@ where
 
             // For OpStack the proposers are allowed to reorg their own chain at will, so we need to
             // always trigger a new payload job if requested.
-            if self.engine_kind.is_opstack() || self.engine_kind.is_chainweb() {
+            // if self.engine_kind.is_opstack() || self.engine_kind.is_chainweb() {
+            // FIXME FIXME FIXME
+            if true {
                 if let Some(attr) = attrs {
                     debug!(target: "engine::tree", head = canonical_header.number(), "handling payload attributes for canonical head");
                     let updated =
