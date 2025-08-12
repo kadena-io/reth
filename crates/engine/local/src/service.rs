@@ -87,8 +87,13 @@ where
         C: ConfigureEvm<Primitives = N::Primitives> + 'static,
     {
         let chain_spec = provider.chain_spec();
-        let engine_kind =
-            if chain_spec.is_optimism() { EngineApiKind::OpStack } else { EngineApiKind::Ethereum };
+        let engine_kind = if chain_spec.is_optimism() {
+            EngineApiKind::OpStack
+        } else if chain_spec.is_chainweb() {
+            EngineApiKind::Chainweb
+        } else {
+            EngineApiKind::Ethereum
+        };
 
         let persistence_handle =
             PersistenceHandle::<N::Primitives>::spawn_service(provider, pruner, sync_metrics_tx);
@@ -144,7 +149,7 @@ where
                     error!(target: "engine::local", "received download request in local engine");
                     Poll::Ready(Some(ChainEvent::FatalError))
                 }
-            }
+            };
         }
 
         // forward incoming requests to the handler

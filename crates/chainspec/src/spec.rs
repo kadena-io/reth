@@ -335,6 +335,12 @@ impl ChainSpec {
         self.chain.is_ethereum()
     }
 
+    /// Returns `true` if this chain contains Chainweb configuration.
+    #[inline]
+    pub const fn is_chainweb(&self) -> bool {
+        self.chain.is_chainweb()
+    }
+
     /// Returns `true` if this chain is Optimism mainnet.
     #[inline]
     pub fn is_optimism_mainnet(&self) -> bool {
