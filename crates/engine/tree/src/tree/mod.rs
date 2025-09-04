@@ -871,7 +871,7 @@ where
             // For OpStack the proposers are allowed to reorg their own chain at will, so we need to
             // always trigger a new payload job if requested.
             // Also allow forcing this behavior via a config flag.
-            if self.engine_kind.is_opstack() ||
+            if self.engine_kind.is_opstack() || self.engine_kind.is_chainweb() ||
                 self.config.always_process_payload_attributes_on_canonical_head()
             {
                 if let Some(attr) = attrs {

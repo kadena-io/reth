@@ -97,9 +97,8 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
 name = "alloy-chains"
-version = "0.2.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4195a29a4b87137b2bb02105e746102873bc03561805cf45c0e510c961f160e6"
+version = "0.2.5"
+source = "git+https://github.com/kadena-io/alloy-rs-chains?branch=kadena-chains#12961b42d31e9cea32433ae6e4407eae3ac50f20"
 dependencies = [
  "alloy-primitives",
  "alloy-rlp",
